@@ -68,6 +68,7 @@ const state = {
   firstGuessWord: "",
   firstGuessPattern: [],
   rows: [],
+  evaluations: [], // stores color results for each row
   currentRow: 0,
   currentCol: 0,
   isOver: false,
@@ -150,6 +151,7 @@ function newGame() {
  state.answer = getDailyAnswer();
   state.firstGuessWord = "";
   state.rows = Array.from({ length: MAX_GUESSES }, () => Array(WORD_LENGTH).fill(""));
+  state.evaluations = Array.from({ length: MAX_GUESSES }, () => null);
   state.currentRow = 0;
   state.currentCol = 0;
   state.isOver = false;
@@ -180,7 +182,9 @@ function renderBoard() {
     for (let c = 0; c < WORD_LENGTH; c += 1) {
       const tile = document.createElement("div");
       const value = state.rows[r][c];
-      tile.className = `tile ${value ? "filled" : ""}`;
+      const evalForRow = state.evaluations[r];
+const evalClass = evalForRow ? evalForRow[c] : "";
+tile.className = `tile ${value ? "filled" : ""} ${evalClass}`.trim();
       tile.textContent = value;
       tile.id = `tile-${r}-${c}`;
       rowEl.appendChild(tile);
@@ -263,6 +267,7 @@ if (!isValidGuess(guess)) {
 }
 
   const evaluation = evaluateGuess(guess, state.answer);
+  state.evaluations[state.currentRow] = evaluation;
   paintRow(state.currentRow, evaluation);
   applyKeyboardState(guess, evaluation);
 
