@@ -107,9 +107,9 @@ function getDailyAnswer() {
   newGame();
 })();
 
-newBtn.addEventListener("click", () => {
+newBtn.addEventListener("click", async () => {
   window.history.replaceState({}, "", window.location.pathname);
-  initMode(new URLSearchParams());
+  await initMode(new URLSearchParams());
   newGame();
 });
 
@@ -131,13 +131,42 @@ window.addEventListener("keydown", (event) => {
 
 async function initMode(searchParams) {
   const mode = searchParams.get("mode");
- if (mode === "reverse") {
-  const id = searchParams.get("id");
-  if (!id) {
-    state.mode = "play";
-    modeBannerEl.textContent = "Invalid reverse link. Starting normal game.";
-    return;
+
+  if (mode === "reverse") {
+    const id = searchParams.get("id");
+    if (!id) {
+      state.mode = "play";
+      modeBannerEl.textContent = "Invalid reverse link. Starting normal game.";
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        `https://sweet-wave-3e23.jorgepelaez21.workers.dev/challenge?id=${encodeURIComponent(id)}`
+      );
+      if (!res.ok) throw new Error("not found");
+
+      const data = await res.json(); // { secret, pattern }
+      if (!data?.secret || data.secret.length !== WORD_LENGTH) throw new Error("bad payload");
+
+      state.mode = "reverse";
+      state.reverseSecret = data.secret.toLowerCase();
+      state.firstGuessPattern = decodePattern(data.pattern || "");
+      modeBannerEl.textContent =
+        "Reverse mode: guess your friend's FIRST guess using only the shown color pattern.";
+      return;
+    } catch (e) {
+      state.mode = "play";
+      modeBannerEl.textContent = "Invalid or expired reverse link. Starting normal game.";
+      return;
+    }
   }
+
+  // default: normal play mode
+  state.mode = "play";
+  modeBannerEl.textContent =
+    "Normal mode: solve the hidden word. Then share your first-guess pattern challenge.";
+}
 
   try {
     const res = await fetch(`https://sweet-wave-3e23.jorgepelaez21.workers.dev/challenge?id=${encodeURIComponent(id)}`);
