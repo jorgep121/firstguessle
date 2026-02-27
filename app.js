@@ -168,30 +168,6 @@ async function initMode(searchParams) {
     "Normal mode: solve the hidden word. Then share your first-guess pattern challenge.";
 }
 
-  try {
-    const res = await fetch(`https://sweet-wave-3e23.jorgepelaez21.workers.dev/challenge?id=${encodeURIComponent(id)}`);
-    if (!res.ok) throw new Error("not found");
-
-    const data = await res.json(); // { secret, pattern }
-    if (!data?.secret || data.secret.length !== WORD_LENGTH) throw new Error("bad payload");
-
-    state.mode = "reverse";
-    state.reverseSecret = data.secret.toLowerCase();
-    state.firstGuessPattern = decodePattern(data.pattern || "");
-    modeBannerEl.textContent = "Reverse mode: guess your friend's FIRST guess using only the shown color pattern.";
-  } catch (e) {
-    state.mode = "play";
-    modeBannerEl.textContent = "Invalid or expired reverse link. Starting normal game.";
-  }
-} else {
-  state.mode = "play";
-  modeBannerEl.textContent = "Normal mode: solve the hidden word. Then share your first-guess pattern challenge.";
-}
-    state.mode = "play";
-    modeBannerEl.textContent = "Normal mode: solve the hidden word. Then share your first-guess pattern challenge.";
-  }
-}
-
 function newGame() {
  state.answer = getDailyAnswer();
   state.firstGuessWord = "";
