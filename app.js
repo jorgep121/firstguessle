@@ -100,10 +100,12 @@ function getDailyAnswer() {
   return ANSWERS[h % ANSWERS.length];
 }
 
-const params = new URLSearchParams(window.location.search);
-initMode(params);
-buildKeyboard();
-newGame();
+(async () => {
+  const params = new URLSearchParams(window.location.search);
+  await initMode(params);
+  buildKeyboard();
+  newGame();
+})();
 
 newBtn.addEventListener("click", () => {
   window.history.replaceState({}, "", window.location.pathname);
@@ -127,21 +129,35 @@ window.addEventListener("keydown", (event) => {
   }
 });
 
-function initMode(searchParams) {
+async function initMode(searchParams) {
   const mode = searchParams.get("mode");
-  if (mode === "reverse") {
-    const secret = searchParams.get("secret");
-    if (!secret || secret.length !== WORD_LENGTH) {
-      state.mode = "play";
-      modeBannerEl.textContent = "Invalid reverse link. Starting normal game.";
-      return;
-    }
+ if (mode === "reverse") {
+  const id = searchParams.get("id");
+  if (!id) {
+    state.mode = "play";
+    modeBannerEl.textContent = "Invalid reverse link. Starting normal game.";
+    return;
+  }
+
+  try {
+    const res = await fetch(`https://sweet-wave-3e23.jorgepelaez21.workers.dev/challenge?id=${encodeURIComponent(id)}`);
+    if (!res.ok) throw new Error("not found");
+
+    const data = await res.json(); // { secret, pattern }
+    if (!data?.secret || data.secret.length !== WORD_LENGTH) throw new Error("bad payload");
 
     state.mode = "reverse";
-    state.reverseSecret = secret.toLowerCase();
-    state.firstGuessPattern = decodePattern(searchParams.get("pattern") || "");
+    state.reverseSecret = data.secret.toLowerCase();
+    state.firstGuessPattern = decodePattern(data.pattern || "");
     modeBannerEl.textContent = "Reverse mode: guess your friend's FIRST guess using only the shown color pattern.";
-  } else {
+  } catch (e) {
+    state.mode = "play";
+    modeBannerEl.textContent = "Invalid or expired reverse link. Starting normal game.";
+  }
+} else {
+  state.mode = "play";
+  modeBannerEl.textContent = "Normal mode: solve the hidden word. Then share your first-guess pattern challenge.";
+}
     state.mode = "play";
     modeBannerEl.textContent = "Normal mode: solve the hidden word. Then share your first-guess pattern challenge.";
   }
@@ -359,14 +375,31 @@ function resetKeyboard() {
   });
 }
 
-function buildShareMessage() {
+async function buildShareMessage() {
   if (!state.firstGuessWord || state.firstGuessPattern.length !== WORD_LENGTH) {
     updateStatus("Make at least one valid guess first.");
     return;
   }
 
-  const patternCode = encodePattern(state.firstGuessPattern);
-  const link = `${window.location.origin}${window.location.pathname}?mode=reverse&pattern=${patternCode}&secret=${state.firstGuessWord}`;
+ const patternCode = encodePattern(state.firstGuessPattern);
+
+// Create a challenge on Cloudflare (stores secret+pattern; returns id)
+const createRes = await fetch("https://sweet-wave-3e23.jorgepelaez21.workers.dev/challenge", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    secret: state.firstGuessWord,
+    pattern: patternCode
+  })
+});
+
+if (!createRes.ok) {
+  updateStatus("Could not create share link. Try again.");
+  return;
+}
+
+const { id } = await createRes.json();
+const link = `${window.location.origin}${window.location.pathname}?mode=reverse&id=${encodeURIComponent(id)}`;
   const emoji = state.firstGuessPattern.map((v) => (v === "correct" ? "🟩" : v === "present" ? "🟨" : "⬛")).join("");
 
   shareOutput.value = [
