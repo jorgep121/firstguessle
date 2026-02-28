@@ -113,7 +113,13 @@ newBtn.addEventListener("click", async () => {
   newGame();
 });
 
-shareBtn.addEventListener("click", buildShareMessage);
+shareBtn.addEventListener("click", () => {
+  if (state.mode === "reverse") {
+    buildReverseResultShare();
+  } else {
+    buildShareMessage();
+  }
+});
 document.getElementById("enter-btn").addEventListener("click", submitGuess);
 document.getElementById("backspace-btn").addEventListener("click", backspace);
 
@@ -307,9 +313,10 @@ if (!isValidGuess(guess)) {
     if (state.mode === "play") {
       updateStatus(`Solved in ${state.currentRow + 1} guesses! Share your reverse challenge.`);
       shareBtn.classList.remove("hidden");
-    } else {
-      updateStatus("Nice! You recovered your friend's first guess.");
-    }
+  } else {
+  updateStatus("Nice! You recovered your friend's first guess.");
+  shareBtn.classList.remove("hidden");
+}
     return;
   }
 
@@ -321,9 +328,10 @@ if (!isValidGuess(guess)) {
     if (state.mode === "play") {
       updateStatus(`Out of turns. The answer was "${state.answer.toUpperCase()}".`);
       if (state.firstGuessWord) shareBtn.classList.remove("hidden");
-    } else {
-      updateStatus(`No luck. Your friend's first guess was "${state.answer.toUpperCase()}".`);
-    }
+   } else {
+  updateStatus(`No luck. Your friend's first guess was "${state.answer.toUpperCase()}".`);
+  shareBtn.classList.remove("hidden");
+}
   } else {
     updateStatus(state.mode === "play" ? "Keep going!" : "Try another first-guess candidate.");
   }
@@ -452,6 +460,27 @@ function decodePattern(text) {
   const map = { "0": "absent", "1": "present", "2": "correct" };
   if (!/^[012]{5}$/.test(text)) return Array(WORD_LENGTH).fill("absent");
   return text.split("").map((v) => map[v]);
+}
+
+function buildReverseResultShare() {
+  const emoji = state.firstGuessPattern
+    .map((v) => (v === "correct" ? "🟩" : v === "present" ? "🟨" : "⬛"))
+    .join("");
+
+  const tries = state.currentRow + 1;
+
+  shareOutput.value = [
+    "FirstGuessle (Reverse Mode)",
+    `Pattern: ${emoji}`,
+    `Solved in ${tries}/${MAX_GUESSES} guesses ✅`,
+    window.location.href
+  ].join("\n");
+
+  shareOutput.classList.remove("hidden");
+  shareOutput.select();
+
+  navigator.clipboard.writeText(shareOutput.value).catch(() => {});
+  updateStatus("Result copied (or selected) for sharing.");
 }
 
 function updateStatus(msg) {
