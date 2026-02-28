@@ -297,6 +297,11 @@ if (!isValidGuess(guess)) {
     state.firstGuessPattern = evaluation;
   }
 
+  if (state.mode === "play" && state.currentRow === 0) {
+  shareBtn.classList.remove("hidden");   // show the button
+  buildShareMessage();                   // auto-generate the link
+}
+
   if (guess === state.answer) {
     state.isOver = true;
     if (state.mode === "play") {
